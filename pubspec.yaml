@@ -27,9 +27,30 @@ environment:
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
+
+
 dependencies:
   flutter:
     sdk: flutter
+    
+  # Game Engine
+  flame: ^1.18.0
+
+  # Motion Detection
+  google_mlkit_pose_detection: ^0.14.1
+
+  # Camera Access
+  camera: ^0.11.0
+
+  # Firebase Core (always first)
+  firebase_core: ^4.4.0
+
+  # Authentication
+  firebase_auth: ^6.1.4
+  google_sign_in: ^7.2.0
+
+  # Database (Leaderboard + Achievements)
+  cloud_firestore: ^6.1.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -56,6 +77,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/sprites/
+    - assets/audio/
+    - assets/fonts/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
