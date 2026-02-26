@@ -1,12 +1,12 @@
-# FitFusion — Cursor AI Handoff Document
+# FitFusion — Windsurf AI Handoff Document
 
 ## How to Use This File
 
-**At the start of every Cursor Composer session, paste this prompt:**
+**At the start of every Windsurf session, paste this prompt:**
 
-> "Read CONTEXT.md and ARCHITECTURE.md in full. Then read the Current Status section of CURSOR_HANDOFF.md. You are now the lead developer on FitFusion. Do not suggest features or structures that contradict these documents. When in doubt, ask. Here is what I need you to do next: [your task]"
+> "Read CONTEXT.md and ARCHITECTURE.md in full. Then read the Current Status section of WINDSURF_HANDOFF.md. You are now the lead developer on FitFusion. Do not suggest features or structures that contradict these documents. When in doubt, ask. Here is what I need you to do next: [your task]"
 
-That one instruction forces Cursor to load all context before generating a single character of code. Do not skip it.
+That one instruction forces Windsurf to load all context before generating a single character of code. Do not skip it.
 
 ---
 
@@ -17,11 +17,11 @@ That one instruction forces Cursor to load all context before generating a singl
 - **Bundle ID:** `com.wukinnin428.fitfusion`
 - **Repository:** `https://github.com/wukinnin/fitfusion`
 - **Platform:** Flutter (Dart), Android only, target device is Tecno Spark Go 30c (Android 14, budget hardware)
-- **Editor:** Cursor AI on Fedora Linux 43, ThinkPad T470
+- **Editor:** Windsurf AI on Fedora Linux 43, ThinkPad T470
 
 ---
 
-## What FitFusion Is (30-Second Summary for Cursor)
+## What FitFusion Is (30-Second Summary for Windsurf)
 
 FitFusion is a game where you exercise to play. The phone's camera detects your body movements using Google ML Kit Pose Detection. The game renders as a 2D overlay on top of the camera feed — the "AR" effect. You choose one of three exercises (Squats, Jumping Jacks, Side Oblique Crunches) before a session. Completing reps attacks a monster on screen. Stopping for more than 3 seconds lets the monster attack you (you lose a life). Survive 10 rounds to win. Google Sign-In via Firebase saves your scores to a leaderboard. High fantasy aesthetic — bright colors, sprites, gold UI.
 
@@ -43,7 +43,7 @@ This is an academic Capstone Project with a hard one-month deadline. **Ship the 
 | State management | `provider ^6.1.2` | Minimal usage |
 | Permissions | `permission_handler ^11.3.0` | Camera runtime request |
 | Typography | `google_fonts ^6.2.1` | Cinzel for fantasy look |
-| Editor | Cursor AI (VS Code fork) | Composer = primary tool |
+| Editor | Windsurf | primary tool |
 | Version control | Git + GitHub | `wukinnin/fitfusion` |
 | Host OS | Fedora Linux 43 | ThinkPad T470, i5-6300U, 16GB |
 | Java | OpenJDK 21 | Required for Gradle |
@@ -221,7 +221,7 @@ Dev environment set up, Firebase configured, app deploys to device.
 
 ---
 
-## Rules for Cursor When Writing Code
+## Rules for Windsurf When Writing Code
 
 These apply to every file, every session, without exception:
 
@@ -257,7 +257,7 @@ These apply to every file, every session, without exception:
 
 ## File Creation Checklist for Milestone 1
 
-Use this as a literal task list in your first Cursor session. Check them off as each file is created and confirmed working:
+Use this as a literal task list in your first Windsurf session. Check them off as each file is created and confirmed working:
 
 ```
 lib/
@@ -358,13 +358,13 @@ git push
 
 ## Session Start Template
 
-Copy and paste this into Cursor Composer at the start of every work session:
+Copy and paste this into Windsurf at the start of every work session:
 
 ```
 Please read the following files in this project in full before responding:
 1. CONTEXT.md
 2. ARCHITECTURE.md
-3. CURSOR_HANDOFF.md (the Current Status section)
+3. WINDSURF_HANDOFF.md (the Current Status section)
 
 Once you have read them, confirm you understand the project by summarizing in 3 sentences:
 - What FitFusion is
@@ -374,4 +374,4 @@ Once you have read them, confirm you understand the project by summarizing in 3 
 Then I will give you the specific task.
 ```
 
-After Cursor confirms, give it the specific task for that session. This 30-second ritual prevents 90% of the "Cursor going off in the wrong direction" problems.
+After Windsurf confirms, give it the specific task for that session. This 30-second ritual prevents 90% of the "Windsurf going off in the wrong direction" problems.

@@ -1,7 +1,7 @@
 # FitFusion — Project Context Document
 
 > **This file is the single source of truth for this project.**
-> Read this file at the start of every Cursor Composer session before writing any code.
+> Read this file at the start of every Windsurf session before writing any code.
 > Every architectural decision, design rule, and constraint defined here is final unless
 > explicitly updated by the project author.
 
@@ -400,7 +400,7 @@ fitfusion/
 │
 ├── CONTEXT.md                             # This file.
 ├── ARCHITECTURE.md                        # Data flow and system design detail.
-├── CURSOR_HANDOFF.md                      # Cursor AI session start prompt.
+├── WINDSURF_HANDOFF.md                    # Windsurf AI session start prompt.
 ├── pubspec.yaml
 └── .gitignore
 ```
@@ -531,7 +531,9 @@ const String kFirebaseRegion = 'asia-southeast1';
 - FlutterFire: configured, `firebase_options.dart` present
 - `google-services.json`: present in `android/app/`
 - Git: initialized, commits pushed to `github.com/wukinnin/fitfusion`
-- Cursor AI: installed with Flutter/Dart extensions, project indexed
+- 
+
+ AI: installed with Flutter/Dart extensions, project indexed
 - Sanity check: default Flutter counter app deployed to device successfully
 
 **Status: Ready to write application code. The toolchain is end-to-end verified.**

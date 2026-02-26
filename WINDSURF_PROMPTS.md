@@ -1,6 +1,6 @@
-# FitFusion — Complete Cursor AI Prompt Playbook
+# FitFusion — Complete Windsurf AI Prompt Playbook
 
-This document contains every prompt you will give to Cursor AI Composer,
+This document contains every prompt you will give to Windsurf AI,
 across all five milestones, from first line of code to release APK.
 
 Each prompt is a discrete, self-contained task. Complete and verify each one
@@ -11,14 +11,14 @@ Do not skip verification steps.
 
 ## The Session Start Ritual — Run This Every Single Time
 
-Every time you open Cursor and start a new Composer session, paste this first.
+Every time you open Windsurf and start a new session, paste this first.
 No exceptions. This is non-negotiable.
 
 ```
 Read the following three files in their entirety before you do anything else:
 1. CONTEXT.md
 2. ARCHITECTURE.md
-3. CURSOR_HANDOFF.md
+3. WINDSURF_HANDOFF.md
 
 After reading all three, confirm your understanding by answering these exactly:
 1. What is FitFusion in one sentence?
@@ -32,9 +32,9 @@ confirmed your answers are correct. If you are unsure about the current state
 of any file, ask me — do not assume.
 ```
 
-Read Cursor's response. If any answer is wrong or vague, correct it and make
-Cursor re-confirm before proceeding. This 60-second ritual prevents hours of
-debugging Cursor's wrong assumptions.
+Read Windsurf's response. If any answer is wrong or vague, correct it and make
+Windsurf re-confirm before proceeding. This 60-second ritual prevents hours of
+debugging Windsurf's wrong assumptions.
 
 ---
 
@@ -1428,7 +1428,7 @@ Now that we have confirmed all three exercises work on the physical device:
    git commit -m "feat: Milestone 1 complete — camera, pose detection, rep detection, pace monitor"
    git push
 
-Update CURSOR_HANDOFF.md Current Status section to reflect:
+Update WINDSURF_HANDOFF.md Current Status section to reflect:
 - Milestone 1 is COMPLETE
 - All motion pipeline files exist and are tested
 - List the exact files created
@@ -2183,7 +2183,7 @@ to workout select. "Home" returns to home screen.
 
 All three tests must pass before closing Milestone 2.
 Commit: "feat: Milestone 2 complete — core game loop, all mechanics working"
-Update CURSOR_HANDOFF.md current status.
+Update WINDSURF_HANDOFF.md current status.
 ```
 
 ---
@@ -2698,7 +2698,7 @@ git tag v1.0.0-mvp
 git push
 git push --tags
 
-Update CURSOR_HANDOFF.md:
+Update WINDSURF_HANDOFF.md:
 - All milestones marked COMPLETE
 - Note the release APK path
 - Note the keystore location (local only, not in repo)
@@ -2710,8 +2710,8 @@ FITFUSION MVP IS COMPLETE.
 
 ## Final Note
 
-Every prompt in this document is designed to be pasted verbatim into Cursor Composer after running the session start ritual. Each prompt is one discrete, testable deliverable. The verification step at the end of each prompt is not optional — it is the gate that lets you proceed. A prompt that deploys but has not been physically tested on the Tecno has not been completed.
+Every prompt in this document is designed to be pasted verbatim into Windsurf after running the session start ritual. Each prompt is one discrete, testable deliverable. The verification step at the end of each prompt is not optional — it is the gate that lets you proceed. A prompt that deploys but has not been physically tested on the Tecno has not been completed.
 
-When Cursor produces code that contradicts CONTEXT.md or ARCHITECTURE.md, correct it immediately and explicitly. Say: "This contradicts ARCHITECTURE.md which states [X]. Revise to comply." Cursor will comply. The documents are your authority. Use them.
+When Windsurf produces code that contradicts CONTEXT.md or ARCHITECTURE.md, correct it immediately and explicitly. Say: "This contradicts ARCHITECTURE.md which states [X]. Revise to comply." Windsurf will comply. The documents are your authority. Use them.
 
 Good luck.

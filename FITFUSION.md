@@ -145,7 +145,7 @@ May include:
 - **FlutterFire** — the bridge layer that connects your Flutter app to Firebase.
 
 **Dev Environment**
-- **Cursor AI** — primary code editor (VS Code fork with AI). Composer is the main vibe-coding tool.
+- **Windsurf** — primary code editor for vibe-coding.
 - **Git + GitHub** — version control. Repo at https://www.github.com/wukinnin/fitfusion
 - **Fedora Linux 43** — host OS on Thinkpad T470.
 - **Android SDK (cmd-line tools)** (command-line tools, API 35 / Android 14) — compiles and deploys APKs.
