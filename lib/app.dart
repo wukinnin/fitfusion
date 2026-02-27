@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'core/theme.dart';
 import 'features/motion/camera_service.dart';
+import 'features/motion/pose_detector_service.dart';
 import 'widgets/camera_preview_widget.dart';
+import 'widgets/pose_overlay_painter.dart';
 
 class FitFusionApp extends StatelessWidget {
   const FitFusionApp({super.key});
@@ -110,8 +113,11 @@ class CameraTestScreen extends StatefulWidget {
 
 class _CameraTestScreenState extends State<CameraTestScreen> {
   final CameraService _cameraService = CameraService();
+  final PoseDetectorService _poseDetectorService = PoseDetectorService();
+  
   bool _initialized = false;
   String? _error;
+  Pose? _currentPose;
 
   @override
   void initState() {
@@ -122,6 +128,24 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
   Future<void> _initCamera() async {
     try {
       await _cameraService.initialize();
+      
+      // Start pose detection
+      if (_cameraService.cameraDescription != null) {
+        _poseDetectorService.startProcessing(
+          _cameraService.frameStream,
+          _cameraService.cameraDescription!,
+        );
+        
+        // Listen for poses
+        _poseDetectorService.poseStream.listen((pose) {
+          if (mounted) {
+            setState(() {
+              _currentPose = pose;
+            });
+          }
+        });
+      }
+
       if (mounted) setState(() => _initialized = true);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -131,6 +155,7 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
   @override
   void dispose() {
     _cameraService.dispose();
+    _poseDetectorService.dispose();
     super.dispose();
   }
 
@@ -160,7 +185,39 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: CameraPreviewWidget(controller: _cameraService.controller),
+      body: Stack(
+        children: [
+          // Layer 1: Camera Feed
+          CameraPreviewWidget(controller: _cameraService.controller),
+          
+          // Layer 2: Pose Overlay (Debug)
+          PoseOverlayWidget(
+            pose: _currentPose,
+            imageSize: const Size(640, 480), // Default for ResolutionPreset.low
+          ),
+          
+          // Layer 3: Debug Info
+          Positioned(
+            top: 40,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _currentPose != null ? 'Pose: ACTIVE' : 'Pose: NULL',
+                style: TextStyle(
+                  color: _currentPose != null ? AppTheme.emerald : AppTheme.crimson,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
