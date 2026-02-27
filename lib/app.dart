@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'core/theme.dart';
 import 'features/motion/camera_service.dart';
@@ -118,7 +117,6 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
   
   bool _initialized = false;
   String? _error;
-  Pose? _currentPose;
 
   @override
   void initState() {
