@@ -136,15 +136,6 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
           _cameraService.frameStream,
           _cameraService.cameraDescription!,
         );
-        
-        // Listen for poses
-        _poseDetectorService.poseStream.listen((pose) {
-          if (mounted) {
-            setState(() {
-              _currentPose = pose;
-            });
-          }
-        });
       }
 
       if (mounted) setState(() => _initialized = true);
@@ -188,37 +179,50 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Layer 1: Camera Feed
+          // Layer 1: Camera Feed (Stable, no rebuilds on pose update)
           CameraPreviewWidget(controller: _cameraService.controller),
           
-          // Layer 2: Pose Overlay (Debug)
-          if (_cameraService.controller?.value.previewSize != null)
-            PoseOverlayWidget(
-              pose: _currentPose,
-              inputImageSize: _cameraService.controller!.value.previewSize!,
-              lensDirection: _cameraService.lensDirection,
-              sensorOrientation: _cameraService.sensorOrientation,
-            ),
-          
-          // Layer 3: Debug Info
-          Positioned(
-            top: 40,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _currentPose != null ? 'Pose: ACTIVE' : 'Pose: NULL',
-                style: TextStyle(
-                  color: _currentPose != null ? AppTheme.emerald : AppTheme.crimson,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
+          // Layer 2 & 3: Pose Overlay & Debug Info (Reactive)
+          StreamBuilder<Pose?>(
+            stream: _poseDetectorService.poseStream,
+            builder: (context, snapshot) {
+              final pose = snapshot.data;
+              
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Layer 2: Pose Overlay
+                  if (_cameraService.controller?.value.previewSize != null)
+                    PoseOverlayWidget(
+                      pose: pose,
+                      inputImageSize: _cameraService.controller!.value.previewSize!,
+                      lensDirection: _cameraService.lensDirection,
+                      sensorOrientation: _cameraService.sensorOrientation,
+                    ),
+                  
+                  // Layer 3: Debug Info
+                  Positioned(
+                    top: 40,
+                    right: 20,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        pose != null ? 'Pose: ACTIVE' : 'Pose: NULL',
+                        style: TextStyle(
+                          color: pose != null ? AppTheme.emerald : AppTheme.crimson,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

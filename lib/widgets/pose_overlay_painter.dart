@@ -167,7 +167,10 @@ class PoseOverlayPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
+  bool shouldRepaint(covariant PoseOverlayPainter oldDelegate) {
+    return oldDelegate.pose != pose ||
+        oldDelegate.inputImageSize != inputImageSize ||
+        oldDelegate.lensDirection != lensDirection ||
+        oldDelegate.sensorOrientation != sensorOrientation;
   }
 }

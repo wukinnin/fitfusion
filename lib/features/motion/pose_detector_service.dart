@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ class PoseDetectorService {
   StreamSubscription? _subscription;
   final StreamController<Pose?> _poseController = StreamController<Pose?>();
   bool _isProcessing = false;
+  Uint8List? _frameBuffer;
 
   PoseDetectorService() {
     _detector = PoseDetector(
@@ -105,14 +107,25 @@ class PoseDetectorService {
         : (format ?? InputImageFormat.nv21);
 
     // Concatenate all plane bytes
-    final WriteBuffer allBytes = WriteBuffer();
+    // Optimization: Pre-calculate size and allocate once to avoid WriteBuffer overhead
+    int totalBytes = 0;
     for (final Plane plane in image.planes) {
-      allBytes.putUint8List(plane.bytes);
+      totalBytes += plane.bytes.length;
     }
-    final bytes = allBytes.done().buffer.asUint8List();
+    
+    // Reuse buffer if possible to avoid GC
+    if (_frameBuffer == null || _frameBuffer!.length != totalBytes) {
+      _frameBuffer = Uint8List(totalBytes);
+    }
+    
+    int offset = 0;
+    for (final Plane plane in image.planes) {
+      _frameBuffer!.setAll(offset, plane.bytes);
+      offset += plane.bytes.length;
+    }
 
     return InputImage.fromBytes(
-      bytes: bytes,
+      bytes: _frameBuffer!,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
