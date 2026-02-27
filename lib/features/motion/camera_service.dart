@@ -17,6 +17,9 @@ class CameraService {
   CameraDescription? get cameraDescription => _selectedCamera;
   bool get isInitialized => _controller?.value.isInitialized ?? false;
   Stream<CameraImage> get frameStream => _frameController.stream;
+  
+  CameraLensDirection get lensDirection => _selectedCamera?.lensDirection ?? CameraLensDirection.front;
+  int get sensorOrientation => _selectedCamera?.sensorOrientation ?? 270;
 
   Future<void> initialize() async {
     try {

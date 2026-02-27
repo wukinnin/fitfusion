@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'core/theme.dart';
 import 'features/motion/camera_service.dart';
@@ -191,10 +192,13 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
           CameraPreviewWidget(controller: _cameraService.controller),
           
           // Layer 2: Pose Overlay (Debug)
-          PoseOverlayWidget(
-            pose: _currentPose,
-            imageSize: const Size(640, 480), // Default for ResolutionPreset.low
-          ),
+          if (_cameraService.controller?.value.previewSize != null)
+            PoseOverlayWidget(
+              pose: _currentPose,
+              inputImageSize: _cameraService.controller!.value.previewSize!,
+              lensDirection: _cameraService.lensDirection,
+              sensorOrientation: _cameraService.sensorOrientation,
+            ),
           
           // Layer 3: Debug Info
           Positioned(
