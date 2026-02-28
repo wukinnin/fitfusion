@@ -55,6 +55,8 @@ class RepDetector {
   _JumpingJackState _jackState = _JumpingJackState.armsDown;
   final _LandmarkBuffer _jackLeftBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
   final _LandmarkBuffer _jackRightBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
+  final _LandmarkBuffer _jackLegSpreadBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
+  final _LandmarkBuffer _jackLegSymmetryBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
 
   _CrunchState _crunchState = _CrunchState.extended;
   final _LandmarkBuffer _crunchLeftBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
@@ -108,6 +110,8 @@ class RepDetector {
     _squatBuffer.clear();
     _jackLeftBuffer.clear();
     _jackRightBuffer.clear();
+    _jackLegSpreadBuffer.clear();
+    _jackLegSymmetryBuffer.clear();
     _crunchLeftBuffer.clear();
     _crunchRightBuffer.clear();
     debugPrint('[RepDetector] State reset');
@@ -187,37 +191,102 @@ class RepDetector {
       pose, PoseLandmarkType.leftWrist, PoseLandmarkType.leftShoulder);
     final rightMetric = _computeJackMetric(
       pose, PoseLandmarkType.rightWrist, PoseLandmarkType.rightShoulder);
+    
+    // Returns [spreadRatio, symmetryRatio]
+    final legMetrics = _computeJackLegMetrics(pose);
 
-    if (leftMetric == null || rightMetric == null) return;
+    if (leftMetric == null || rightMetric == null || legMetrics == null) return;
 
     _jackLeftBuffer.add(leftMetric);
     _jackRightBuffer.add(rightMetric);
+    _jackLegSpreadBuffer.add(legMetrics[0]);
+    _jackLegSymmetryBuffer.add(legMetrics[1]);
 
-    if (!_jackLeftBuffer.isFull || !_jackRightBuffer.isFull) return;
+    if (!_jackLeftBuffer.isFull || 
+        !_jackRightBuffer.isFull || 
+        !_jackLegSpreadBuffer.isFull || 
+        !_jackLegSymmetryBuffer.isFull) return;
 
     final leftSmoothed = _jackLeftBuffer.average;
     final rightSmoothed = _jackRightBuffer.average;
+    final spreadSmoothed = _jackLegSpreadBuffer.average;
+    final symmetrySmoothed = _jackLegSymmetryBuffer.average;
+
+    // Debug print
+    if (leftSmoothed > 0.05 || rightSmoothed > 0.05) {
+       debugPrint('[JJ Debug] L:${leftSmoothed.toStringAsFixed(3)} R:${rightSmoothed.toStringAsFixed(3)} Spread:${spreadSmoothed.toStringAsFixed(2)} Sym:${symmetrySmoothed.toStringAsFixed(2)} State:$_jackState');
+    }
 
     switch (_jackState) {
       case _JumpingJackState.armsDown:
         // Arms raise: wrist goes ABOVE shoulder
-        // In image space, y decreases upward, so raised wrist has smaller y than shoulder
-        // leftMetric = shoulder.y - wrist.y — positive means wrist is above shoulder
+        // AND Legs must be symmetrically apart
+        // symmetrySmoothed = min(distL, distR) / shoulderWidth.
+        // If one leg stays in, symmetrySmoothed will be small.
         if (leftSmoothed > kJumpingJackWristRaiseThreshold &&
-            rightSmoothed > kJumpingJackWristRaiseThreshold) {
+            rightSmoothed > kJumpingJackWristRaiseThreshold &&
+            symmetrySmoothed > kJumpingJackPerLegThreshold) {
           _jackState = _JumpingJackState.armsUp;
-          debugPrint('[RepDetector] Jumping Jack UP detected');
+          debugPrint('[RepDetector] Jumping Jack UP detected (Symmetrical)');
         }
         break;
 
       case _JumpingJackState.armsUp:
         // Arms return down: wrist drops back below shoulder
-        if (leftSmoothed <= 0 && rightSmoothed <= 0) {
+        // AND Legs must be together (total spread small)
+        if (leftSmoothed <= 0 && 
+            rightSmoothed <= 0 &&
+            spreadSmoothed < kJumpingJackLegsTogetherRatio) {
           _jackState = _JumpingJackState.armsDown;
           _emitRep();
         }
         break;
     }
+  }
+
+  List<double>? _computeJackLegMetrics(Pose pose) {
+    final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
+    final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
+    final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
+    final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
+    final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
+
+    if (leftShoulder == null || rightShoulder == null || 
+        leftHip == null || rightHip == null ||
+        leftAnkle == null || rightAnkle == null) return null;
+        
+    // Check likelihoods
+    if (leftShoulder.likelihood < kLandmarkLikelihoodThreshold ||
+        rightShoulder.likelihood < kLandmarkLikelihoodThreshold ||
+        leftHip.likelihood < kLandmarkLikelihoodThreshold ||
+        rightHip.likelihood < kLandmarkLikelihoodThreshold ||
+        leftAnkle.likelihood < kLandmarkLikelihoodThreshold ||
+        rightAnkle.likelihood < kLandmarkLikelihoodThreshold) return null;
+
+    final shoulderWidth = math.sqrt(
+      math.pow(leftShoulder.x - rightShoulder.x, 2) +
+      math.pow(leftShoulder.y - rightShoulder.y, 2)
+    );
+    
+    if (shoulderWidth == 0) return null;
+
+    // Metric 1: Total Spread (Ankle to Ankle)
+    final ankleDistance = math.sqrt(
+      math.pow(leftAnkle.x - rightAnkle.x, 2) +
+      math.pow(leftAnkle.y - rightAnkle.y, 2)
+    );
+    final spreadRatio = ankleDistance / shoulderWidth;
+
+    // Metric 2: Symmetry (Min distance from hip center)
+    final midHipX = (leftHip.x + rightHip.x) / 2;
+    final leftDist = (leftAnkle.x - midHipX).abs();
+    final rightDist = (rightAnkle.x - midHipX).abs();
+    
+    // We care about the *minimum* extension. If one leg is 0.0 and the other is 1.0, min is 0.0 -> Fail.
+    final symmetryRatio = math.min(leftDist, rightDist) / shoulderWidth;
+
+    return [spreadRatio, symmetryRatio];
   }
 
   double? _computeJackMetric(Pose pose, PoseLandmarkType wristType, PoseLandmarkType shoulderType) {
