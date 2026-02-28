@@ -11,7 +11,7 @@ class CameraService {
   int _frameCount = 0;
 
   final StreamController<CameraImage> _frameController =
-      StreamController<CameraImage>();
+      StreamController<CameraImage>.broadcast();
 
   CameraController? get controller => _controller;
   CameraDescription? get cameraDescription => _selectedCamera;

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'core/enums.dart';
 import 'core/theme.dart';
 import 'features/motion/camera_service.dart';
 import 'features/motion/pose_detector_service.dart';
+import 'features/motion/rep_detector.dart';
 import 'widgets/camera_preview_widget.dart';
 import 'widgets/pose_overlay_painter.dart';
 
@@ -114,9 +116,11 @@ class CameraTestScreen extends StatefulWidget {
 class _CameraTestScreenState extends State<CameraTestScreen> {
   final CameraService _cameraService = CameraService();
   final PoseDetectorService _poseDetectorService = PoseDetectorService();
+  RepDetector? _repDetector;
   
   bool _initialized = false;
   String? _error;
+  int _repCount = 0;
 
   @override
   void initState() {
@@ -134,6 +138,24 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
           _cameraService.frameStream,
           _cameraService.cameraDescription!,
         );
+        
+        // Initialize RepDetector
+        // Change WorkoutType here to test different exercises:
+        // WorkoutType.squats
+        // WorkoutType.jumpingJacks
+        // WorkoutType.obliqueCrunches
+        _repDetector = RepDetector(
+          workoutType: WorkoutType.squats,
+          poseStream: _poseDetectorService.poseStream,
+        );
+        
+        _repDetector!.repStream.listen((event) {
+          if (mounted) {
+            setState(() {
+              _repCount++;
+            });
+          }
+        });
       }
 
       if (mounted) setState(() => _initialized = true);
@@ -144,6 +166,7 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
 
   @override
   void dispose() {
+    _repDetector?.dispose();
     _cameraService.dispose();
     _poseDetectorService.dispose();
     super.dispose();
@@ -214,6 +237,30 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
                           color: pose != null ? AppTheme.emerald : AppTheme.crimson,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Layer 4: Rep Counter
+                  Positioned(
+                    bottom: 50,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Text(
+                        'REPS: $_repCount',
+                        style: const TextStyle(
+                          color: AppTheme.gold,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 10.0,
+                              color: Colors.black,
+                              offset: Offset(2.0, 2.0),
+                            ),
+                          ],
                         ),
                       ),
                     ),

@@ -15,7 +15,8 @@ const double kLandmarkLikelihoodThreshold = 0.5;
 // Rep Detection Thresholds
 // These are normalized coordinate values (0.0 to 1.0 relative to image size)
 // They will require tuning via physical device testing
-const double kSquatHipDropThreshold = 0.15;
+const double kSquatDownThreshold = 0.15; // Hip must drop below this delta to count as DOWN
+const double kSquatUpThreshold = 0.28;   // Hip must rise above this delta to count as UP (stand fully)
 const double kJumpingJackWristRaiseThreshold = 0.08;
 const double kCrunchWristHipProximityThreshold = 0.18;
 

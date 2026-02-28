@@ -8,7 +8,7 @@ import 'package:fitfusion/core/constants.dart';
 class PoseDetectorService {
   late final PoseDetector _detector;
   StreamSubscription? _subscription;
-  final StreamController<Pose?> _poseController = StreamController<Pose?>();
+  final StreamController<Pose?> _poseController = StreamController<Pose?>.broadcast();
   bool _isProcessing = false;
   Uint8List? _frameBuffer;
 
