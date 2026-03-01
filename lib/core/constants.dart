@@ -23,10 +23,12 @@ const double kJumpingJackLegsTogetherRatio = 0.9; // Ankle separation must be < 
 // Standing Oblique Side Crunch thresholds (all normalised by shoulder width)
 // kCrunchElbowKneeCrunchThreshold    — elbow↔knee ratio must fall BELOW this to enter the crunching state
 // kCrunchElbowKneeExtendedThreshold  — elbow↔knee ratio must rise ABOVE this to complete the rep (hysteresis gap prevents false counts)
-// kCrunchHeadElbowFormThreshold      — ear↔elbow ratio must stay BELOW this; frames above it are discarded (hands dropped from head)
-const double kCrunchElbowKneeCrunchThreshold   = 1.2;
-const double kCrunchElbowKneeExtendedThreshold = 1.8;
-const double kCrunchHeadElbowFormThreshold     = 0.8;
+//
+// Tuned for forgiveness:
+// - Higher crunch threshold (1.35) = easier to trigger "down" than original (1.2), but tighter than 1.45
+// - Lower extended threshold (1.7) = easier to trigger "up" than original (1.8), but tighter than 1.6
+const double kCrunchElbowKneeCrunchThreshold   = 1.35;
+const double kCrunchElbowKneeExtendedThreshold = 1.7;
 
 // Rolling Average Buffer
 const int kLandmarkBufferWindowSize = 5;

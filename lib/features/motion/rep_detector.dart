@@ -63,17 +63,14 @@ class RepDetector {
   // Per-side independent state — left and right are never mutually exclusive
   _CrunchSideState _leftCrunchState = _CrunchSideState.extended;
   _CrunchSideState _rightCrunchState = _CrunchSideState.extended;
+  
+  // Robustness: Cache the shoulder width so momentary occlusion doesn't break detection
+  double? _lastValidShoulderWidth;
 
   // Primary rep metric: elbow-to-knee distance, normalised by shoulder width.
   // Small value = elbow and raised knee are close together (crunched).
   final _LandmarkBuffer _crunchLeftElbowKneeBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
   final _LandmarkBuffer _crunchRightElbowKneeBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
-
-  // Form-validation metric: same-side ear-to-elbow distance, normalised by shoulder width.
-  // Small value = elbow is near head (hands-behind-head position maintained).
-  // Frames where this is too large are discarded — user has dropped their hands.
-  final _LandmarkBuffer _crunchLeftHeadElbowBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
-  final _LandmarkBuffer _crunchRightHeadElbowBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
 
   RepDetector({
     required this.workoutType,
@@ -128,8 +125,7 @@ class RepDetector {
     _jackLegSymmetryBuffer.clear();
     _crunchLeftElbowKneeBuffer.clear();
     _crunchRightElbowKneeBuffer.clear();
-    _crunchLeftHeadElbowBuffer.clear();
-    _crunchRightHeadElbowBuffer.clear();
+    _lastValidShoulderWidth = null;
     debugPrint('[RepDetector] State reset');
   }
 
@@ -348,46 +344,44 @@ class RepDetector {
 
   void _processObliqueCrunch(Pose pose) {
     // Compute a normalisation reference that is robust to camera distance.
-    final refWidth = _computeShoulderWidth(pose);
-    if (refWidth == null || refWidth == 0) return;
+    final currentWidth = _computeShoulderWidth(pose);
+    
+    if (currentWidth != null && currentWidth > 0) {
+      _lastValidShoulderWidth = currentWidth;
+    }
+
+    final refWidth = _lastValidShoulderWidth;
+    if (refWidth == null) return; // No reference yet, cannot normalize
 
     // --- Gather per-side raw metrics ---
     final leftElbowKnee  = _computeNormalisedDistance(
       pose, PoseLandmarkType.leftElbow, PoseLandmarkType.leftKnee, refWidth);
     final rightElbowKnee = _computeNormalisedDistance(
       pose, PoseLandmarkType.rightElbow, PoseLandmarkType.rightKnee, refWidth);
-    final leftHeadElbow  = _computeNormalisedDistance(
-      pose, PoseLandmarkType.leftEar, PoseLandmarkType.leftElbow, refWidth);
-    final rightHeadElbow = _computeNormalisedDistance(
-      pose, PoseLandmarkType.rightEar, PoseLandmarkType.rightElbow, refWidth);
 
     // Only add to a buffer when its landmarks are visible this frame.
     // Buffers are updated atomically per side so they stay in sync.
-    if (leftElbowKnee != null && leftHeadElbow != null) {
+    if (leftElbowKnee != null) {
       _crunchLeftElbowKneeBuffer.add(leftElbowKnee);
-      _crunchLeftHeadElbowBuffer.add(leftHeadElbow);
     }
-    if (rightElbowKnee != null && rightHeadElbow != null) {
+    if (rightElbowKnee != null) {
       _crunchRightElbowKneeBuffer.add(rightElbowKnee);
-      _crunchRightHeadElbowBuffer.add(rightHeadElbow);
     }
 
     // Process each side independently once its buffers are warm.
-    if (_crunchLeftElbowKneeBuffer.isFull && _crunchLeftHeadElbowBuffer.isFull) {
+    if (_crunchLeftElbowKneeBuffer.isFull) {
       _evaluateCrunchSide(
         side: 'LEFT',
         elbowKneeSmoothed: _crunchLeftElbowKneeBuffer.average,
-        headElbowSmoothed: _crunchLeftHeadElbowBuffer.average,
         stateGetter: () => _leftCrunchState,
         stateSetter: (s) => _leftCrunchState = s,
       );
     }
 
-    if (_crunchRightElbowKneeBuffer.isFull && _crunchRightHeadElbowBuffer.isFull) {
+    if (_crunchRightElbowKneeBuffer.isFull) {
       _evaluateCrunchSide(
         side: 'RIGHT',
         elbowKneeSmoothed: _crunchRightElbowKneeBuffer.average,
-        headElbowSmoothed: _crunchRightHeadElbowBuffer.average,
         stateGetter: () => _rightCrunchState,
         stateSetter: (s) => _rightCrunchState = s,
       );
@@ -397,18 +391,9 @@ class RepDetector {
   void _evaluateCrunchSide({
     required String side,
     required double elbowKneeSmoothed,
-    required double headElbowSmoothed,
     required _CrunchSideState Function() stateGetter,
     required void Function(_CrunchSideState) stateSetter,
   }) {
-    // Form gate: if the elbow has drifted far from the ear the user has
-    // dropped their hands — discard this frame rather than corrupt state.
-    if (headElbowSmoothed > kCrunchHeadElbowFormThreshold) {
-      debugPrint('[Crunch $side] Form gate — elbow too far from head '
-          '(${headElbowSmoothed.toStringAsFixed(3)} > $kCrunchHeadElbowFormThreshold)');
-      return;
-    }
-
     final currentState = stateGetter();
 
     switch (currentState) {
