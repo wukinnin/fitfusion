@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
-import 'package:fitfusion/core/constants.dart';
+import '../../core/constants.dart';
 
 class PoseDetectorService {
   late final PoseDetector _detector;
