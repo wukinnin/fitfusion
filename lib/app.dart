@@ -3,6 +3,7 @@ import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'core/enums.dart';
 import 'core/theme.dart';
 import 'features/motion/camera_service.dart';
+import 'features/motion/pace_monitor.dart';
 import 'features/motion/pose_detector_service.dart';
 import 'features/motion/rep_detector.dart';
 import 'widgets/camera_preview_widget.dart';
@@ -116,11 +117,15 @@ class CameraTestScreen extends StatefulWidget {
 class _CameraTestScreenState extends State<CameraTestScreen> {
   final CameraService _cameraService = CameraService();
   final PoseDetectorService _poseDetectorService = PoseDetectorService();
+  final PaceMonitor _paceMonitor = PaceMonitor();
   RepDetector? _repDetector;
   
   bool _initialized = false;
   String? _error;
   int _repCount = 0;
+  int _paceFailCount = 0;
+  String _paceStatus = 'PACE: WAITING';
+  Color _paceStatusColor = AppTheme.gold;
 
   @override
   void initState() {
@@ -140,21 +145,42 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
         );
         
         // Initialize RepDetector
-        // Change WorkoutType here to test different exercises:
-        // WorkoutType.squats
-        // WorkoutType.jumpingJacks
-        // WorkoutType.obliqueCrunches
+        // May be WorkoutType.squats or WorkoutType.jumpingJacks or WorkoutType.obliqueCrunches
         _repDetector = RepDetector(
           workoutType: WorkoutType.obliqueCrunches,
           poseStream: _poseDetectorService.poseStream,
         );
         
+        // Listen to Reps
         _repDetector!.repStream.listen((event) {
-          if (mounted) {
-            setState(() {
-              _repCount++;
-            });
+          if (!mounted) return;
+          
+          if (_repCount == 0) {
+            _paceMonitor.startMonitoring();
           }
+          _paceMonitor.onRepReceived();
+          
+          setState(() {
+            _repCount++;
+            _paceStatus = 'PACE: OK';
+            _paceStatusColor = AppTheme.emerald;
+          });
+        });
+
+        // Listen to Pace Events
+        _paceMonitor.paceStream.listen((event) {
+          if (!mounted) return;
+          
+          setState(() {
+            if (event.type == PaceEventType.repOnTime) {
+              _paceStatus = 'PACE: OK';
+              _paceStatusColor = AppTheme.emerald;
+            } else {
+              _paceStatus = 'PACE: FAIL ⚠';
+              _paceStatusColor = AppTheme.crimson;
+              _paceFailCount++;
+            }
+          });
         });
       }
 
@@ -164,8 +190,20 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
     }
   }
 
+  void _resetTest() {
+    setState(() {
+      _repCount = 0;
+      _paceFailCount = 0;
+      _paceStatus = 'PACE: WAITING';
+      _paceStatusColor = AppTheme.gold;
+    });
+    _paceMonitor.stopMonitoring();
+    _repDetector?.reset();
+  }
+
   @override
   void dispose() {
+    _paceMonitor.dispose();
     _repDetector?.dispose();
     _cameraService.dispose();
     _poseDetectorService.dispose();
@@ -200,76 +238,124 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Layer 1: Camera Feed (Stable, no rebuilds on pose update)
+          // Layer 1: Camera Feed
           CameraPreviewWidget(controller: _cameraService.controller),
           
-          // Layer 2 & 3: Pose Overlay & Debug Info (Reactive)
+          // Layer 2: Pose Overlay
           StreamBuilder<Pose?>(
             stream: _poseDetectorService.poseStream,
             builder: (context, snapshot) {
               final pose = snapshot.data;
-              
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Layer 2: Pose Overlay
-                  if (_cameraService.controller?.value.previewSize != null)
-                    PoseOverlayWidget(
-                      pose: pose,
-                      inputImageSize: _cameraService.controller!.value.previewSize!,
-                      lensDirection: _cameraService.lensDirection,
-                      sensorOrientation: _cameraService.sensorOrientation,
-                    ),
-                  
-                  // Layer 3: Debug Info
-                  Positioned(
-                    top: 40,
-                    right: 20,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        pose != null ? 'Pose: ACTIVE' : 'Pose: NULL',
-                        style: TextStyle(
-                          color: pose != null ? AppTheme.emerald : AppTheme.crimson,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Layer 4: Rep Counter
-                  Positioned(
-                    bottom: 50,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: Text(
-                        'REPS: $_repCount',
-                        style: const TextStyle(
-                          color: AppTheme.gold,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              blurRadius: 10.0,
-                              color: Colors.black,
-                              offset: Offset(2.0, 2.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              if (_cameraService.controller?.value.previewSize == null) {
+                return const SizedBox.shrink();
+              }
+              return PoseOverlayWidget(
+                pose: pose,
+                inputImageSize: _cameraService.controller!.value.previewSize!,
+                lensDirection: _cameraService.lensDirection,
+                sensorOrientation: _cameraService.sensorOrientation,
               );
             },
           ),
+
+          // Layer 3: HUD / Info
+          Positioned(
+            top: 40,
+            right: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Pose Status
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: StreamBuilder<Pose?>(
+                    stream: _poseDetectorService.poseStream,
+                    builder: (context, snapshot) {
+                      final hasPose = snapshot.hasData && snapshot.data != null;
+                      return Text(
+                        hasPose ? 'Pose: ACTIVE' : 'Pose: NULL',
+                        style: TextStyle(
+                          color: hasPose ? AppTheme.emerald : AppTheme.crimson,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                
+                // Pace Status
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _paceStatus,
+                    style: TextStyle(
+                      color: _paceStatusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+
+                // Pace Fail Count
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Pace Fails: $_paceFailCount',
+                    style: const TextStyle(
+                      color: AppTheme.creamWhite,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Layer 4: Rep Counter (Bottom Center)
+          Positioned(
+            bottom: 50,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'REPS: $_repCount',
+                style: const TextStyle(
+                  color: AppTheme.gold,
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  shadows: [
+                    Shadow(
+                      blurRadius: 10.0,
+                      color: Colors.black,
+                      offset: Offset(2.0, 2.0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _resetTest,
+        backgroundColor: AppTheme.gold,
+        child: const Icon(Icons.refresh, color: AppTheme.midnightNavy),
       ),
     );
   }

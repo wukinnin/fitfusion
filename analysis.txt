@@ -1,0 +1,5 @@
+Analyzing fitfusion...                                          
+
+warning • Unused import: 'core/events.dart' • lib/app.dart:4:8 • unused_import
+
+1 issue found. (ran in 3.5s)
