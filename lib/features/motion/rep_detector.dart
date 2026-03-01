@@ -38,8 +38,10 @@ enum _SquatState { standing, squatDown }
 // State Machine 2 — Jumping Jacks
 enum _JumpingJackState { armsDown, armsUp }
 
-// State Machine 3 — Side Oblique Crunches
-enum _CrunchState { extended, leftCrunchDown, rightCrunchDown }
+// State Machine 3 — Standing Oblique Side Crunches
+// Left and right sides are fully independent concurrent state machines.
+// A rep is emitted the moment either side completes a full crunch-and-return cycle.
+enum _CrunchSideState { extended, crunching }
 
 class RepDetector {
   final WorkoutType workoutType;
@@ -58,9 +60,20 @@ class RepDetector {
   final _LandmarkBuffer _jackLegSpreadBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
   final _LandmarkBuffer _jackLegSymmetryBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
 
-  _CrunchState _crunchState = _CrunchState.extended;
-  final _LandmarkBuffer _crunchLeftBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
-  final _LandmarkBuffer _crunchRightBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
+  // Per-side independent state — left and right are never mutually exclusive
+  _CrunchSideState _leftCrunchState = _CrunchSideState.extended;
+  _CrunchSideState _rightCrunchState = _CrunchSideState.extended;
+
+  // Primary rep metric: elbow-to-knee distance, normalised by shoulder width.
+  // Small value = elbow and raised knee are close together (crunched).
+  final _LandmarkBuffer _crunchLeftElbowKneeBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
+  final _LandmarkBuffer _crunchRightElbowKneeBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
+
+  // Form-validation metric: same-side ear-to-elbow distance, normalised by shoulder width.
+  // Small value = elbow is near head (hands-behind-head position maintained).
+  // Frames where this is too large are discarded — user has dropped their hands.
+  final _LandmarkBuffer _crunchLeftHeadElbowBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
+  final _LandmarkBuffer _crunchRightHeadElbowBuffer = _LandmarkBuffer(kLandmarkBufferWindowSize);
 
   RepDetector({
     required this.workoutType,
@@ -106,14 +119,17 @@ class RepDetector {
   void reset() {
     _squatState = _SquatState.standing;
     _jackState = _JumpingJackState.armsDown;
-    _crunchState = _CrunchState.extended;
+    _leftCrunchState = _CrunchSideState.extended;
+    _rightCrunchState = _CrunchSideState.extended;
     _squatBuffer.clear();
     _jackLeftBuffer.clear();
     _jackRightBuffer.clear();
     _jackLegSpreadBuffer.clear();
     _jackLegSymmetryBuffer.clear();
-    _crunchLeftBuffer.clear();
-    _crunchRightBuffer.clear();
+    _crunchLeftElbowKneeBuffer.clear();
+    _crunchRightElbowKneeBuffer.clear();
+    _crunchLeftHeadElbowBuffer.clear();
+    _crunchRightHeadElbowBuffer.clear();
     debugPrint('[RepDetector] State reset');
   }
 
@@ -202,10 +218,12 @@ class RepDetector {
     _jackLegSpreadBuffer.add(legMetrics[0]);
     _jackLegSymmetryBuffer.add(legMetrics[1]);
 
-    if (!_jackLeftBuffer.isFull || 
-        !_jackRightBuffer.isFull || 
-        !_jackLegSpreadBuffer.isFull || 
-        !_jackLegSymmetryBuffer.isFull) return;
+    if (!_jackLeftBuffer.isFull ||
+        !_jackRightBuffer.isFull ||
+        !_jackLegSpreadBuffer.isFull ||
+        !_jackLegSymmetryBuffer.isFull) {
+      return;
+    }
 
     final leftSmoothed = _jackLeftBuffer.average;
     final rightSmoothed = _jackRightBuffer.average;
@@ -252,9 +270,11 @@ class RepDetector {
     final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
     final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
 
-    if (leftShoulder == null || rightShoulder == null || 
+    if (leftShoulder == null || rightShoulder == null ||
         leftHip == null || rightHip == null ||
-        leftAnkle == null || rightAnkle == null) return null;
+        leftAnkle == null || rightAnkle == null) {
+      return null;
+    }
         
     // Check likelihoods
     if (leftShoulder.likelihood < kLandmarkLikelihoodThreshold ||
@@ -262,7 +282,9 @@ class RepDetector {
         leftHip.likelihood < kLandmarkLikelihoodThreshold ||
         rightHip.likelihood < kLandmarkLikelihoodThreshold ||
         leftAnkle.likelihood < kLandmarkLikelihoodThreshold ||
-        rightAnkle.likelihood < kLandmarkLikelihoodThreshold) return null;
+        rightAnkle.likelihood < kLandmarkLikelihoodThreshold) {
+      return null;
+    }
 
     final shoulderWidth = math.sqrt(
       math.pow(leftShoulder.x - rightShoulder.x, 2) +
@@ -303,63 +325,148 @@ class RepDetector {
     return shoulder.y - wrist.y;
   }
 
-  // --- Oblique Crunch Logic ---
+  // --- Standing Oblique Side Crunch Logic ---
+  //
+  // Exercise form (from reference image):
+  //   • Hands interlaced behind the head, elbows flared wide.
+  //   • One knee drives upward and across while the torso crunches
+  //     laterally, bringing the same-side elbow down to meet the knee.
+  //   • Return to standing upright to complete one rep.
+  //
+  // Detection strategy:
+  //   1. PRIMARY METRIC  — elbow↔knee distance (normalised by shoulder width).
+  //      Standing/extended: large ratio (elbow is far above the lowered knee).
+  //      Crunched:          small ratio (elbow and raised knee converge).
+  //   2. FORM VALIDATOR  — ear↔elbow distance (normalised by shoulder width).
+  //      Hands-behind-head: small ratio throughout the entire movement.
+  //      Frames where this is too large are skipped to avoid false counts
+  //      when the user drops their arms between sets.
+  //
+  // Left and right sides run as fully independent state machines so that
+  // alternating reps (L, R, L, R …) are each counted without one side
+  // blocking the other.
 
   void _processObliqueCrunch(Pose pose) {
-    final leftDist = _computeCrunchDistance(
-      pose, PoseLandmarkType.leftWrist, PoseLandmarkType.leftHip);
-    final rightDist = _computeCrunchDistance(
-      pose, PoseLandmarkType.rightWrist, PoseLandmarkType.rightHip);
+    // Compute a normalisation reference that is robust to camera distance.
+    final refWidth = _computeShoulderWidth(pose);
+    if (refWidth == null || refWidth == 0) return;
 
-    if (leftDist != null) _crunchLeftBuffer.add(leftDist);
-    if (rightDist != null) _crunchRightBuffer.add(rightDist);
+    // --- Gather per-side raw metrics ---
+    final leftElbowKnee  = _computeNormalisedDistance(
+      pose, PoseLandmarkType.leftElbow, PoseLandmarkType.leftKnee, refWidth);
+    final rightElbowKnee = _computeNormalisedDistance(
+      pose, PoseLandmarkType.rightElbow, PoseLandmarkType.rightKnee, refWidth);
+    final leftHeadElbow  = _computeNormalisedDistance(
+      pose, PoseLandmarkType.leftEar, PoseLandmarkType.leftElbow, refWidth);
+    final rightHeadElbow = _computeNormalisedDistance(
+      pose, PoseLandmarkType.rightEar, PoseLandmarkType.rightElbow, refWidth);
 
-    if (!_crunchLeftBuffer.isFull || !_crunchRightBuffer.isFull) return;
+    // Only add to a buffer when its landmarks are visible this frame.
+    // Buffers are updated atomically per side so they stay in sync.
+    if (leftElbowKnee != null && leftHeadElbow != null) {
+      _crunchLeftElbowKneeBuffer.add(leftElbowKnee);
+      _crunchLeftHeadElbowBuffer.add(leftHeadElbow);
+    }
+    if (rightElbowKnee != null && rightHeadElbow != null) {
+      _crunchRightElbowKneeBuffer.add(rightElbowKnee);
+      _crunchRightHeadElbowBuffer.add(rightHeadElbow);
+    }
 
-    final leftSmoothed = _crunchLeftBuffer.average;
-    final rightSmoothed = _crunchRightBuffer.average;
+    // Process each side independently once its buffers are warm.
+    if (_crunchLeftElbowKneeBuffer.isFull && _crunchLeftHeadElbowBuffer.isFull) {
+      _evaluateCrunchSide(
+        side: 'LEFT',
+        elbowKneeSmoothed: _crunchLeftElbowKneeBuffer.average,
+        headElbowSmoothed: _crunchLeftHeadElbowBuffer.average,
+        stateGetter: () => _leftCrunchState,
+        stateSetter: (s) => _leftCrunchState = s,
+      );
+    }
 
-    switch (_crunchState) {
-      case _CrunchState.extended:
-        // Detect crunch: wrist gets close to same-side hip
-        if (leftSmoothed < kCrunchWristHipProximityThreshold) {
-          _crunchState = _CrunchState.leftCrunchDown;
-          debugPrint('[RepDetector] Left crunch DOWN');
-        } else if (rightSmoothed < kCrunchWristHipProximityThreshold) {
-          _crunchState = _CrunchState.rightCrunchDown;
-          debugPrint('[RepDetector] Right crunch DOWN');
+    if (_crunchRightElbowKneeBuffer.isFull && _crunchRightHeadElbowBuffer.isFull) {
+      _evaluateCrunchSide(
+        side: 'RIGHT',
+        elbowKneeSmoothed: _crunchRightElbowKneeBuffer.average,
+        headElbowSmoothed: _crunchRightHeadElbowBuffer.average,
+        stateGetter: () => _rightCrunchState,
+        stateSetter: (s) => _rightCrunchState = s,
+      );
+    }
+  }
+
+  void _evaluateCrunchSide({
+    required String side,
+    required double elbowKneeSmoothed,
+    required double headElbowSmoothed,
+    required _CrunchSideState Function() stateGetter,
+    required void Function(_CrunchSideState) stateSetter,
+  }) {
+    // Form gate: if the elbow has drifted far from the ear the user has
+    // dropped their hands — discard this frame rather than corrupt state.
+    if (headElbowSmoothed > kCrunchHeadElbowFormThreshold) {
+      debugPrint('[Crunch $side] Form gate — elbow too far from head '
+          '(${headElbowSmoothed.toStringAsFixed(3)} > $kCrunchHeadElbowFormThreshold)');
+      return;
+    }
+
+    final currentState = stateGetter();
+
+    switch (currentState) {
+      case _CrunchSideState.extended:
+        // Elbow and knee converge — crunch phase begins.
+        if (elbowKneeSmoothed < kCrunchElbowKneeCrunchThreshold) {
+          stateSetter(_CrunchSideState.crunching);
+          debugPrint('[Crunch $side] CRUNCHING '
+              '(elbowKnee: ${elbowKneeSmoothed.toStringAsFixed(3)})');
         }
         break;
 
-      case _CrunchState.leftCrunchDown:
-        // The 1.5x multiplier creates hysteresis — prevents oscillation
-        // at the threshold boundary from causing rapid false reps
-        if (leftSmoothed > kCrunchWristHipProximityThreshold * 1.5) {
-          _crunchState = _CrunchState.extended;
+      case _CrunchSideState.crunching:
+        // Elbow and knee separate back to standing position — rep complete.
+        // The extended threshold is intentionally larger than the crunch threshold
+        // (hysteresis) to prevent oscillation at the boundary.
+        if (elbowKneeSmoothed > kCrunchElbowKneeExtendedThreshold) {
+          stateSetter(_CrunchSideState.extended);
           _emitRep();
-        }
-        break;
-
-      case _CrunchState.rightCrunchDown:
-        if (rightSmoothed > kCrunchWristHipProximityThreshold * 1.5) {
-          _crunchState = _CrunchState.extended;
-          _emitRep();
+          debugPrint('[Crunch $side] REP COMPLETE '
+              '(elbowKnee: ${elbowKneeSmoothed.toStringAsFixed(3)})');
         }
         break;
     }
   }
 
-  double? _computeCrunchDistance(Pose pose, PoseLandmarkType wristType, PoseLandmarkType hipType) {
-    final wrist = pose.landmarks[wristType];
-    final hip = pose.landmarks[hipType];
+  /// Returns the Euclidean distance between two landmarks, divided by
+  /// [refWidth] to make it invariant to camera distance and body size.
+  double? _computeNormalisedDistance(
+    Pose pose,
+    PoseLandmarkType typeA,
+    PoseLandmarkType typeB,
+    double refWidth,
+  ) {
+    final a = pose.landmarks[typeA];
+    final b = pose.landmarks[typeB];
 
-    if (wrist == null || hip == null) return null;
-    if (wrist.likelihood < kLandmarkLikelihoodThreshold) return null;
-    if (hip.likelihood < kLandmarkLikelihoodThreshold) return null;
+    if (a == null || b == null) return null;
+    if (a.likelihood < kLandmarkLikelihoodThreshold) return null;
+    if (b.likelihood < kLandmarkLikelihoodThreshold) return null;
 
-    // Euclidean distance in normalized coordinate space
-    final dx = wrist.x - hip.x;
-    final dy = wrist.y - hip.y;
+    final dx = a.x - b.x;
+    final dy = a.y - b.y;
+    return math.sqrt(dx * dx + dy * dy) / refWidth;
+  }
+
+  /// Returns the Euclidean distance between the two shoulders, used as a
+  /// body-relative normalisation reference throughout the crunch detector.
+  double? _computeShoulderWidth(Pose pose) {
+    final ls = pose.landmarks[PoseLandmarkType.leftShoulder];
+    final rs = pose.landmarks[PoseLandmarkType.rightShoulder];
+
+    if (ls == null || rs == null) return null;
+    if (ls.likelihood < kLandmarkLikelihoodThreshold) return null;
+    if (rs.likelihood < kLandmarkLikelihoodThreshold) return null;
+
+    final dx = ls.x - rs.x;
+    final dy = ls.y - rs.y;
     return math.sqrt(dx * dx + dy * dy);
   }
 }

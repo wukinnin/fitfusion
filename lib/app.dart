@@ -145,7 +145,7 @@ class _CameraTestScreenState extends State<CameraTestScreen> {
         // WorkoutType.jumpingJacks
         // WorkoutType.obliqueCrunches
         _repDetector = RepDetector(
-          workoutType: WorkoutType.jumpingJacks,
+          workoutType: WorkoutType.obliqueCrunches,
           poseStream: _poseDetectorService.poseStream,
         );
         

@@ -20,7 +20,13 @@ const double kSquatUpThreshold = 0.28;   // Hip must rise above this delta to co
 const double kJumpingJackWristRaiseThreshold = 0.08;
 const double kJumpingJackPerLegThreshold = 0.55; // Each leg must be > 0.55x shoulder width from center
 const double kJumpingJackLegsTogetherRatio = 0.9; // Ankle separation must be < 0.9x shoulder width
-const double kCrunchWristHipProximityThreshold = 0.18;
+// Standing Oblique Side Crunch thresholds (all normalised by shoulder width)
+// kCrunchElbowKneeCrunchThreshold    — elbow↔knee ratio must fall BELOW this to enter the crunching state
+// kCrunchElbowKneeExtendedThreshold  — elbow↔knee ratio must rise ABOVE this to complete the rep (hysteresis gap prevents false counts)
+// kCrunchHeadElbowFormThreshold      — ear↔elbow ratio must stay BELOW this; frames above it are discarded (hands dropped from head)
+const double kCrunchElbowKneeCrunchThreshold   = 1.2;
+const double kCrunchElbowKneeExtendedThreshold = 1.8;
+const double kCrunchHeadElbowFormThreshold     = 0.8;
 
 // Rolling Average Buffer
 const int kLandmarkBufferWindowSize = 5;
