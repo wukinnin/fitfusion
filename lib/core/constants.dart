@@ -1,8 +1,8 @@
 // Game Rules
 const int kTotalRounds = 10;
 const int kStartingLives = 3;
-const double kPaceThresholdSeconds = 3.0;
-const int kCooldownSeconds = 12;
+const double kPaceThresholdSeconds = 5.0;
+const int kCooldownSeconds = 15;
 
 // Rep formula — repsRequired(round) = round + 1
 // round is 1-indexed (1 through 10)

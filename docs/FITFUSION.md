@@ -67,61 +67,9 @@ Naturally, performance may vary depending on device compatibility, sensor accura
 # Objectives Breakdown:
 
 - "Immersive" in this context overall, means the fact that you have to immerse yourself to exercise in order to play the game.
-- "Augmented Gamification" is how we render the game elements, like health, sprites, etc.
+- "Augmented Gamification" is how we render the game elements, like hud, sprites, etc.
 
-# Rough Game Design
-
-(metaphors, "creative", and game terms beware)
-
-- Players can choose one from three workouts between:
-    - Squats
-    - Jumping Jacks
-    - Side Oblique Crunches. 
-- These workouts are similar in that we work with quantifiable measurements of rounds (sets), reps, and time.
-- In any given session of gameplay, the goal is to go through 10 levels of progressive difficulty (Round 1 = 2 reps, Round 2 = 3 reps...), and ultimately finish the game.
-
-## Main Loop:
-
-- In each round a "monster" blocks the path to progression, and the player must defeat the monster in order to move forward.
-- The only way the player can "slay" a monster is to perform enough reps in a given set i.e. "lowering its health" to zero.
-- A player has to pace consistently and rhythmically perform the reps (i.e. a pace every 3 seconds or less) without stopping or taking too long between reps to "slay" the monster.
-- After each successful "slain" monster, a cooldown period of 10-15 seconds is set after each round before the next monster to be slayed.
-- After the 10th monster is slain, the game is over and the player wins.
-
-## Conditionals:
-
-- The player has its own "lives count". If a player stops or takes too long in between reps, the monster "attacks" the player, and the player "loses a life (out of 3)".
-- If a player "loses all its lives", the game is over, the monsters win, and has to retry from the beginning.
-
-## Gamification:
-
-Endurance and speed is "the name of the game"
-
-### Leaderboards 
-
-Ranks entire userbase of Top 10 players in ascending order. 
-May be split into each of the three workouts.
-
-May include:
-
-- Fastest round time all time
-- Fastest rep pace all time (1 rep per second)
-
-### Player Stats
-
-Per individual player basis. May be split into each of the three workouts.
-
-May include:
-
-- Personal best round time
-- Personal best rep pace
-- Average round time
-- Average rep pace
-
-(can split into three and total of three)
-
-- Rounds played total
-- Minutes played in-game
+# Game design at GAMEPLAY.md
 
 ---
 
