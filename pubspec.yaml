@@ -82,19 +82,18 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
+
   assets:
-    # --- Audio ---
-    - assets/Audio/SFX/
-    - assets/Audio/ST/
-    - assets/Audio/VO/
+    # --- Audio (Flame looks for assets/audio/) ---
+    - assets/audio/sfx/
+    - assets/audio/music/
+    - assets/audio/vo/
 
-    # --- Sprites ---
-    - assets/Sprites/Monsters-64x96px/
-    - assets/Sprites/PixelHealthBar-128x16px/
-    - assets/Sprites/Sword-64x64px/
-    - assets/Sprites/SPR_heart-sprite-sheet-48x24px.png
-    - assets/Sprites/SPR_logo_fitfusion-752x752px.png
-
+    # --- Images (Flame looks for assets/images/) ---
+    - assets/images/monsters/
+    - assets/images/ui/
+    - assets/images/sword/
+    
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
