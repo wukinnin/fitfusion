@@ -123,8 +123,8 @@ Formula: `repsRequired(round) = round + 1`
 
 #### Health Bar (assets/images/ui/bar_*.png)
 - Display on Top Center, with space to the left to accommodate for monster sprite
-- Shrinks relevant to Monster/Rep count HP. 
-- Tied to Rep Counter
+- Bar shrinks relevant to the Total Reps Done/Reps Needed 
+- Equivalent and Tied to Rep Counter
 
 #### Monsters (assets/images/monster/monster_*.png)
 - Displayed on the upper left corner.
