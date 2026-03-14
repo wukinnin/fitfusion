@@ -238,7 +238,7 @@ Neither condition is reversible mid-session.
 - Subtext: "You have failed to keep up!"
 - Shows "Retry" and 'Quit" button, each with "Are you sure you want to [X]?" confirmation screen?
 
-### Asset Integration: Sequences [in order]
+### Asset Integration: Audio Sequences [in order]
 
 Executed one after the other.
 
@@ -251,18 +251,39 @@ Executed one after the other.
 1. Play `audio/sfx/victory_*.mp3`
 2. Play the `audio/vo/announcer_victory_*.mp3` file 
 3. Execute Victory screen + `audio/music/cooldown_period.mp3` in loop until player quits or retries.
-4. Back button prompts to quit.
 
 
 **Player Defeated**
 1. Play `audio/sfx/lose_*.mp3`
 2. Play any random and repeating `audio/vo/announcer_lose_*.mp3` file 
 3. Execute Defeat screen + `audio/music/cooldown_period.mp3` in loop until player quits or retries.
-4. Back button prompts to quit.
 
 ---
 
-### Screens and Conditions Summarized. 
+### Screens and Gameplay Flow
+
+PSEUDO LOGIC
+
+1. Launch Game
+2. Select from (3) Workout Types: Squats, Jumping Jacks, Side Crunches
+3. Gameplay Begins (Gameplay Proper screen)
+
+while Round > 9
+{
+1. Cooldown period Screen (give player time to prepare)
+2. Gameplay proper (with all conditions and game mechanics in place)
+3. if winRound = true, then Cooldown Period screen +  Audio sequence (Continue)
+}
+
+if round = 10
+{
+1. Cooldown period
+2. Gameplay proper
+3. if winRound = true, then Victory screen +  Audio sequence (victory)
+}
+
+If at any point the player fails to rep, the player takes damage, and loses a life, show damage screen red filter thing.
+Take enough damage, and lose all life, then show defeat screen. +  Audio sequence (Lose)
 
 ---
 
