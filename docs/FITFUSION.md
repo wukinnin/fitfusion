@@ -1,4 +1,6 @@
-**Overview**
+# FITFUSION
+
+**Brief Overview**
 - A mobile game for Android.
 - A fitness-centered game that gamifies fitness activities.
 - Aesthetically High Fantasy-inspired
@@ -10,11 +12,11 @@
 
 *---START OF FORMAL PROJECT DETAIL---*
 
-# General Objective:
+## General Objective:
 
 This study aims to analyze, design, and develop "FitFusion", A platform for immersive fitness realities enhancing engagement through augmented gamification in digital workouts, to promote a meaningful exercise participation. 
 
-# Specific Objectives:
+### Specific Objectives:
 
 Specifically, the study aims to:
 
@@ -30,9 +32,9 @@ Specifically, the study aims to:
     2. Player Statistics
     3. Achievements
 
-# Scope and Limitations
+## Scope and Limitations
 
-## Scope of the Study
+### Scope of the Study
 
 The study focuses on the analysis, design, and development of Fitfusion: A digital platform that incorporates augmented reality (AR) and motion-tracking with interactive gamification elements, to promote meaningful exercise participation.
 
@@ -42,7 +44,7 @@ Central to the design of FitFusion is to create a unique solution utilizing sma
 
 With all this, the platform will then tie in gamification elements promoting fitness. Competitive elements include ranked leaderboards, game achievements, and player statistics.
 
-## Limitations of the Study
+### Limitations of the Study
 
 While FitFusion is designed to offer a unique digital platform for exercise enhancing measures in general, the study is limited in a few key areas.
 
@@ -62,18 +64,73 @@ Naturally, performance may vary depending on device compatibility, sensor accura
 
 ---
 
-*---START OF AUTHOR ANNOTATIONS--*
+# Project Context
 
-# Objectives Breakdown:
+**FitFusion** is an Android mobile application that is simultaneously a fitness tool and a 2D augmented reality game. The core concept is simple: the player's physical body is the game controller. To play the game, you must exercise. To exercise effectively, the game must reward you. These two things are inseparable — the exercise IS the gameplay.
 
-- "Immersive" in this context overall, means the fact that you have to immerse yourself to exercise in order to play the game.
-- "Augmented Gamification" is how we render the game elements, like hud, sprites, etc.
+The app uses the phone's front-facing camera to detect the player's body movements in real time via Google ML Kit Pose Detection. The game renders as a 2D overlay drawn directly on top of the live camera feed, creating an augmented reality effect. The player sees themselves on screen with game elements — monsters, health bars, HUD — composited as a layer over the camera image. The body is tracked, reps are counted, and those reps drive every game mechanic.
 
-# Game design at GAMEPLAY.md
+The product must be a functioning, demonstrable MVP delivered within one month. **Every decision in this codebase prioritizes a working, shippable product over architectural perfection.**
+
+## Visual Design Direction
+
+### Theme: High Fantasy
+Bright, vibrant, heroic. Think classic JRPG meets Western high fantasy — golden UI frames, glowing spell effects, colorful monster sprites, ornate borders. Reference: Final Fantasy, Might & Magic, early Dragon Quest aesthetic.
+
+NOT: dark/gritty, desaturated, horror, steampunk, sci-fi.
+
+### Color Palette
+| Role | Color | Hex |
+|------|-------|-----|
+| Primary dark | Royal Blue | `#1A237E` |
+| Primary accent | Gold | `#FFD700` |
+| Secondary | Emerald | `#2E7D32` |
+| Danger | Crimson | `#B71C1C` |
+| Background | Midnight Navy | `#0D1B3E` |
+| UI panel fill | Parchment | `#FFF8E1` |
+| Glow / damage | Bright Gold | `#FFEE58` |
+| Text on dark | Cream White | `#FFFDE7` |
+
+### Typography
+- **Display / headers:** "Cinzel" (Google Fonts) — serif, classical Roman letterform, feels ancient and heroic
+- **Body / HUD:** "Cinzel Decorative" or fallback system serif
+- Damage numbers: large, bold, gold, floating upward animation
 
 ---
 
-# Development:
+# Development
+
+## Technical Constraints
+
+### The Hardware Constraint
+**The target device is the Tecno Spark Go 30c (Android 14, budget tier).** Every performance decision is made for this device. If it works on a flagship but lags on the Tecno, the Tecno wins and the code changes.
+
+### Performance Rules
+1. ML Kit Pose Detection must not be called on every camera frame. Process **every 2nd frame minimum**; every 3rd frame if the device shows lag.
+2. Camera feed input to ML Kit must be **640×480 or lower resolution**. Do not pass full-resolution frames to the detector.
+3. Frame processing (ML Kit inference) must run **off the main thread** — use `compute()` or an `Isolate` to prevent UI jank.
+4. Flame targets 60 FPS but must degrade gracefully. Never block the game loop with I/O.
+5. Dispose of `CameraController` and `PoseDetector` properly on widget disposal to prevent memory leaks.
+6. Firebase writes happen **after session end only** — never during active gameplay.
+
+### ML Kit Pose Detection Rules
+- Use the `PoseDetectionMode.stream` mode for live detection
+- Use the **base model** (`PoseDetectorOptions` default), not the accurate model — the accurate model is too slow for budget hardware
+- 33 landmarks are returned per frame, each with normalized `x`, `y`, `z`, and `likelihood`
+- **Always check `likelihood >= 0.5` before using any landmark.** Below this threshold, the data is unreliable — skip that frame's contribution to rep detection
+- Landmark coordinates are normalized (0.0–1.0) relative to image dimensions. Multiply by image width/height to get pixel positions for overlay drawing.
+- The front camera feed is horizontally mirrored on Android. Compensate for this in the `CustomPainter` overlay and in landmark-based calculations (left/right may be inverted in raw data)
+
+### Code Style Rules
+- Dart file names: `snake_case.dart`
+- Class names: `PascalCase`
+- Constants: prefix `k`, camelCase — e.g., `kPaceThresholdSeconds`, `kTotalRounds`, `kStartingLives`
+- Enum types and values: `PascalCase` — e.g., `WorkoutType.squats`, `GamePhase.cooldown`
+- Private members: prefix `_`
+- No `print()` in production code — use Flutter's `debugPrint()` wrapped in `assert`
+- Prefer `const` constructors wherever possible
+
+## Current Project State (At Time of Writing)
 
 **Platform & Language**
 - **Flutter** (Dart) — the app framework. Builds and deploys to Android to Linux machine.
@@ -101,6 +158,6 @@ Naturally, performance may vary depending on device compatibility, sensor accura
 - **Gradle 8**
 - **ADB** (Android Debug Bridge) — physical and wireless connection to the Tecno Spark Go 30c.
 
-*---END OF AUTHOR ANNOTATIONS--*
-
 ---
+
+**NOTE: Please read to ARCHITECTURE.md and GAMEPLAY.md for further information about the system.**

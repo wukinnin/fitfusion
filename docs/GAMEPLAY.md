@@ -224,7 +224,7 @@ Neither condition is reversible mid-session.
     - Average rep/sec (minutes:secs.milliseconds)
     - Fastest rep/sec (minutes:secs.milliseconds)
 - Subtext: "You have defeated all 10 monsters!"
-- Shows "Retry" and 'Quit" button, each with "Are you sure you want to [X]?" confirmation screen?
+- Shows "Retry" and 'Quit" button, each with "Are you sure you want to [X]?" confirmation screen
 
 #### Defeat Screen
 - Screen is tinted red at ~25% opacity
@@ -236,7 +236,7 @@ Neither condition is reversible mid-session.
     - Fastest rep/sec (minutes:secs.milliseconds)
     - Last round (last round/total rounds)
 - Subtext: "You have failed to keep up!"
-- Shows "Retry" and 'Quit" button, each with "Are you sure you want to [X]?" confirmation screen?
+- Shows "Retry" and 'Quit" button, each with "Are you sure you want to [X]?" confirmation screen
 
 ### Asset Integration: Audio Sequences [in order]
 
@@ -290,6 +290,7 @@ Take enough damage, and lose all life, then show defeat screen. +  Audio sequenc
 ### MISC
 
 - In gameplay proper, is a hands-free experience.
+- UI, In-game, we want to utilize UI/UX animations like slides, fades, etc. Screens that transition to one or another, or gameplay functions like player/monster damaging, losing lives, etc. should have an appopriate and user friendly animations. We want it to be flowing and intuitive game experience.
 - Pressing back button, home button, or recent apps/overview button immediately ends the session to the defeat screen anywhere during gameplay proper, and all player lives are lost (There is no such pause or exit function mid game; this is by design)
 - All screens/gameplay mockup screenshots are located in `fitfusion/docs/*.png`, and is the basis for most description. May include visual elements unexpounded upon verbally.
     - `gameplay_proper.png` — Proper game session
